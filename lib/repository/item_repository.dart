@@ -41,6 +41,19 @@ class ItemRepository extends ChangeNotifier {
     }
   }
 
+  Future<void> addNote(int id, String note) async {
+    final db = await SQLHelper.db();
+    try {
+      var index = _list.indexWhere((element) => element.id == id);
+      await db.update(_table, {'note': note}, where: "id = ?", whereArgs: [id]);
+      _list[index].note = note;
+    } catch (e) {
+      throw Exception(e);
+    } finally {
+      notifyListeners();
+    }
+  }
+
   Future<void> toggle(int id) async {
     final db = await SQLHelper.db();
     try {

@@ -23,9 +23,11 @@ class UpdateScreen extends StatefulWidget {
 }
 
 class _UpdateScreenState extends State<UpdateScreen> {
+  final itemNoteController = TextEditingController();
+
   bool _isLoading = false;
   bool _scanMode = false;
-  String _search = 'blank';
+  String _search = '';
 
   List<Item> _items = [];
 
@@ -33,6 +35,12 @@ class _UpdateScreenState extends State<UpdateScreen> {
   void initState() {
     _load();
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    itemNoteController.dispose();
+    super.dispose();
   }
 
   void _load() async {
@@ -54,6 +62,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
   void _searchItem(String key) {
     key = key.toLowerCase();
     setState(() {
+      _search = key;
       _items = widget.itemRepository.list
           .where((element) =>
               element.partNumber.toLowerCase().contains(key) ||
@@ -159,7 +168,13 @@ class _UpdateScreenState extends State<UpdateScreen> {
                       ),
                       suffixIcon: InkWell(
                         onTap: () => setState(() {
-                          _scanMode = !_scanMode;
+                          if (_scanMode) {
+                            _scanMode = false;
+                            _searchItem('');
+                          } else {
+                            _scanMode = true;
+                          }
+                          // _scanMode = !_scanMode;
                         }),
                         splashColor: const Color(0xffFAFAFA),
                         highlightColor: const Color(0xffFAFAFA),
@@ -199,10 +214,15 @@ class _UpdateScreenState extends State<UpdateScreen> {
                               scanAreaScale: 1,
                               scanLineColor: orangeColor,
                               onCapture: (key) async {
-                                // _searchItem(data);
-                                var id = widget.itemRepository.list.firstWhere((element) => element.partNumber.toLowerCase() == key).id;
-                                await widget.itemRepository.check(id);
-                                setState(() { _scanMode = false; });
+                                _searchItem(key);
+                                // var id = widget.itemRepository.list
+                                //     .firstWhere((element) =>
+                                //         element.partNumber.toLowerCase() == key)
+                                //     .id;
+                                // await widget.itemRepository.check(id);
+                                // setState(() {
+                                //   _scanMode = false;
+                                // });
                               },
                             ),
                           ),
@@ -218,8 +238,14 @@ class _UpdateScreenState extends State<UpdateScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 15,
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 15),
+                  child: Visibility(
+                    visible: _search != '',
+                    child: Center(child: Text('${_items.length} item(s) found.', style: GoogleFonts.poppins().copyWith(
+                      fontSize: 9, color: const Color(0xFF8D92A3),
+                    ),)),
+                  ),
                 ),
                 _isLoading
                     ? const Padding(
@@ -232,124 +258,191 @@ class _UpdateScreenState extends State<UpdateScreen> {
                       )
                     : _items.isNotEmpty
                         ? Expanded(
+                            child: MediaQuery.removePadding(
+                            removeTop: true,
+                            context: context,
                             child: ListView.builder(
-                            itemBuilder: (context, index) => Card(
-                              margin: const EdgeInsets.only(bottom: 10, top: 0),
-                              child: Padding(
-                                padding: const EdgeInsets.all(18),
-                                child: Column(
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _items[index].itemNumber.toString(),
-                                          style: GoogleFonts.poppins().copyWith(
-                                              fontSize: 10,
-                                              color: const Color(0xFF8D92A3)),
-                                        ),
-                                        SizedBox(
-                                          width: MediaQuery.of(context)
-                                                  .size
-                                                  .width -
-                                              200,
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                _items[index].jobDescription,
-                                                style: GoogleFonts.poppins()
-                                                    .copyWith(
-                                                  fontSize: 14,
+                              itemBuilder: (context, index) => Card(
+                                margin:
+                                    const EdgeInsets.only(bottom: 10, top: 0),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(18),
+                                  child: Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _items[index].itemNumber.toString(),
+                                            style: GoogleFonts.poppins()
+                                                .copyWith(
+                                                    fontSize: 10,
+                                                    color: const Color(
+                                                        0xFF8D92A3)),
+                                          ),
+                                          SizedBox(
+                                            width: MediaQuery.of(context)
+                                                    .size
+                                                    .width -
+                                                200,
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  _items[index].jobDescription,
+                                                  style: GoogleFonts.poppins()
+                                                      .copyWith(
+                                                    fontSize: 14,
+                                                  ),
                                                 ),
-                                              ),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceBetween,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.end,
-                                                children: [
-                                                  Text(_items[index].partNumber,
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.end,
+                                                  children: [
+                                                    Text(
+                                                        _items[index]
+                                                            .partNumber,
+                                                        style: GoogleFonts
+                                                                .poppins()
+                                                            .copyWith(
+                                                                fontSize: 14,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w900),
+                                                        overflow: TextOverflow
+                                                            .ellipsis),
+                                                    Text(
+                                                      '${_items[index].quantity.toString()} Qty',
                                                       style: GoogleFonts
                                                               .poppins()
                                                           .copyWith(
-                                                              fontSize: 14,
+                                                              fontSize: 9,
                                                               fontWeight:
                                                                   FontWeight
-                                                                      .w900),
-                                                      overflow: TextOverflow
-                                                          .ellipsis),
-                                                  Text(
-                                                    '${_items[index].quantity.toString()} Qty',
-                                                    style: GoogleFonts.poppins()
-                                                        .copyWith(
-                                                            fontSize: 9,
-                                                            fontWeight:
-                                                                FontWeight.w100,
-                                                            color: const Color(
-                                                                0xFF8D92A3)),
-                                                  ),
-                                                ],
-                                              )
-                                            ],
+                                                                      .w100,
+                                                              color: const Color(
+                                                                  0xFF8D92A3)),
+                                                    ),
+                                                  ],
+                                                )
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        Checkbox(
-                                            value: _items[index].checked,
-                                            onChanged: (checked) async {
-                                              await widget.itemRepository
-                                                  .toggle(_items[index].id);
-                                              await widget.shippingRepository
-                                                  .progress(
-                                                      widget.shipping.id,
-                                                      _items
-                                                              .where((element) =>
-                                                                  element
-                                                                      .checked)
-                                                              .length /
-                                                          _items.length *
-                                                          100);
-                                            }),
-                                      ],
-                                    ),
-                                    const Divider(),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text("-", style: GoogleFonts.poppins().copyWith(
-                                          fontSize: 10, color: const Color(0xFF8D92A3),
-                                        ),),
-                                        const InkWell(
-                                          child: Icon(Icons.edit, color: Color(0xFF8D92A3), size: 12,),
-                                        ),
-                                      ],
-                                    )
-                                  ],
+                                          Checkbox(
+                                              value: _items[index].checked,
+                                              onChanged: (checked) async {
+                                                await widget.itemRepository
+                                                    .toggle(_items[index].id);
+                                                await widget.shippingRepository
+                                                    .progress(
+                                                        widget.shipping.id,
+                                                        widget.itemRepository
+                                                                .list
+                                                                .where((element) =>
+                                                                    element
+                                                                        .checked)
+                                                                .length /
+                                                            widget
+                                                                .itemRepository
+                                                                .list
+                                                                .length *
+                                                            100);
+                                              }),
+                                        ],
+                                      ),
+                                      const Divider(),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            _items[index].note,
+                                            style:
+                                                GoogleFonts.poppins().copyWith(
+                                              fontSize: 10,
+                                              color: const Color(0xFF8D92A3),
+                                            ),
+                                          ),
+                                          InkWell(
+                                            child: const Icon(
+                                              Icons.edit,
+                                              color: Color(0xFF8D92A3),
+                                              size: 12,
+                                            ),
+                                            onTap: () => showDialog(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                  title: Text("Item Note", style: GoogleFonts.poppins().copyWith(
+                                                    fontSize: 14,
+                                                  ),),
+                                                  content: TextField(
+                                                    controller: itemNoteController,
+                                                    keyboardType: TextInputType.text,
+                                                    style: GoogleFonts.poppins().copyWith(fontSize: 10),
+                                                    maxLines: 3,
+                                                    decoration: InputDecoration(
+                                                      hintText: "Give a note to the item",
+                                                      hintStyle: GoogleFonts.poppins().copyWith(
+                                                          fontSize: 10, color: const Color(0xFF8D92A3)),
+                                                      border: const OutlineInputBorder(
+                                                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                                                          borderSide: BorderSide(width: 3)),
+                                                      contentPadding: const EdgeInsets.symmetric(
+                                                          horizontal: 18, vertical: 15),
+                                                      isDense: true,
+                                                      fillColor: Colors.white,
+                                                      filled: true,
+                                                    ),
+                                                  ),
+                                                  actions: [
+                                                    Padding(
+                                                      padding: const EdgeInsets.only(right: 20, left: 20, bottom: 10),
+                                                      child: ElevatedButton(
+                                                        style: ElevatedButton.styleFrom(
+                                                          backgroundColor: const Color(0xffFFCC28),
+                                                          padding: const EdgeInsets.only(
+                                                              top: 5, bottom: 5, left: 20, right: 20),
+                                                        ),
+                                                        onPressed: () async {
+                                                          await widget.itemRepository.addNote(_items[index].id, itemNoteController.text);
+                                                          itemNoteController.clear();
+                                                          Navigator.of(context).pop();
+                                                        },
+                                                        child: Text(
+                                                          'Save',
+                                                          style: GoogleFonts.poppins().copyWith(
+                                                            fontWeight: FontWeight.bold,
+                                                            fontSize: 13,
+                                                            color: const Color(0xFF0F2A75),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                  ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    ],
+                                  ),
                                 ),
                               ),
+                              itemCount: _items.length,
+                              scrollDirection: Axis.vertical,
+                              shrinkWrap: true,
                             ),
-                            itemCount: _items.length,
-                            scrollDirection: Axis.vertical,
-                            shrinkWrap: true,
                           ))
-                        : Padding(
-                            padding: const EdgeInsets.only(top: 30),
-                            child: Center(
-                              child: Text(
-                                "No item yet.",
-                                style: GoogleFonts.poppins().copyWith(
-                                    color: const Color(0xFF8D92A3),
-                                    fontSize: 12),
-                              ),
-                            ),
-                          ),
+                        : const SizedBox(),
               ]),
         ));
   }

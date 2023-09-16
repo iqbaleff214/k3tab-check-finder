@@ -9,6 +9,7 @@ class Item {
   late String status;
   bool checked = false;
   int quantity = 0;
+  String note = '';
 
   Item(this.jobDescription, this.status, this.listId, num qty, dynamic partNo, dynamic itemNo) {
     if (qty is double) {
@@ -39,6 +40,7 @@ class Item {
     listId = json['list_id'];
     quantity = json['quantity'];
     checked = json['checked'] == 1;
+    note = json['note'];
   }
 
   Map<String, dynamic> toJson() {
@@ -50,6 +52,7 @@ class Item {
       'list_id': listId,
       'quantity': quantity,
       'checked': checked ? 1 : 0,
+      'note': note,
     };
   }
 }

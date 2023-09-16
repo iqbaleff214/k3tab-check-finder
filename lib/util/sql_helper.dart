@@ -29,6 +29,7 @@ class SQLHelper {
           list_id INTEGER,
           quantity INTEGER DEFAULT 0,
           checked INTEGER DEFAULT 0,
+          note TEXT,
           FOREIGN KEY (list_id) REFERENCES lists(id)
         )
     """);
