@@ -29,6 +29,24 @@ class ItemRepository extends ChangeNotifier {
     }
   }
 
+  void sort() {
+    _list.sort((a, b) {
+      if ((a.checked && b.checked) || (!a.checked && !b.checked)) {
+        if (!a.checked && (a.note.isNotEmpty || b.note.isNotEmpty) && (a.note != b.note)) {
+          return a.note.isEmpty ? 1 : -1;
+        }
+
+        return a.itemNumber.compareTo(b.itemNumber);
+      } else if (a.checked && !b.checked) {
+        return -1;
+      } else if (!a.checked && b.checked) {
+        return 1;
+      } else {
+        return 0;
+      }
+    });
+  }
+
   Future<void> add(Item item) async {
     final db = await SQLHelper.db();
     try {

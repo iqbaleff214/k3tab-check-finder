@@ -5,6 +5,7 @@ import 'package:k3tab_2023/model/shipping_model.dart';
 import 'package:k3tab_2023/repository/item_repository.dart';
 import 'package:k3tab_2023/repository/shipping_repository.dart';
 import 'package:k3tab_2023/util/color.dart';
+import 'package:k3tab_2023/view/summary_screen.dart';
 import 'package:scan/scan.dart';
 
 class UpdateScreen extends StatefulWidget {
@@ -140,7 +141,19 @@ class _UpdateScreenState extends State<UpdateScreen> {
                         ),
                         InkWell(
                           child: const Icon(Icons.file_copy),
-                          onTap: () => Navigator.pop(context),
+                          onTap: () => WidgetsBinding?.instance
+                              ?.addPostFrameCallback((_) {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SummaryScreen(
+                                        itemRepository: widget.itemRepository,
+                                        shippingRepository: widget.shippingRepository,
+                                        shipping: widget.shipping,
+                                      ),
+                                ));
+                          }),
                         ),
                       ],
                     ),
@@ -242,7 +255,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
                   margin: const EdgeInsets.symmetric(vertical: 15),
                   child: Visibility(
                     visible: _search != '',
-                    child: Center(child: Text('${_items.length} item(s) found.', style: GoogleFonts.poppins().copyWith(
+                    child: Center(child: Text('${_items.length} item(s) found for "$_search".', style: GoogleFonts.poppins().copyWith(
                       fontSize: 9, color: const Color(0xFF8D92A3),
                     ),)),
                   ),

@@ -4,9 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:k3tab_2023/util/color.dart';
 
 final List<String> imgList = [
-  'https://pbs.twimg.com/media/F6J-StEa4AAJAW2?format=jpg&name=4096x4096',
-  'https://pbs.twimg.com/media/F6J-StDawAAJFjm?format=jpg&name=4096x4096',
-  'https://pbs.twimg.com/media/F6J-StEbQAA-32k?format=jpg&name=4096x4096',
+  'asset/img01.jpg',
+  'asset/img02.jpg',
+  'asset/img03.jpg',
 ];
 
 class SplashScreen extends StatefulWidget {
@@ -47,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
                               Color(0xFF707070),
                               BlendMode.multiply,
                             ),
-                            child: Image.network(
+                            child: Image.asset(
                               item,
                               fit: BoxFit.cover,
                               height: height,
@@ -64,7 +64,12 @@ class _SplashScreenState extends State<SplashScreen> {
                     children: [
                       Container(
                           margin: const EdgeInsets.only(right: 20),
-                          child: const Icon(Icons.fact_check_outlined, size: 75, color: Colors.white,)
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(50)
+                          ),
+                          child: Image.asset("asset/findcheckerpng.png", height: 75.0, width: 75.0,),
                       ),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.start,
