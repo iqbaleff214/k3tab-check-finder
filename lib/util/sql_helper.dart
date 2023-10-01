@@ -24,6 +24,7 @@ class SQLHelper {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           item_number INTEGER,
           part_number TEXT,
+          segment TEXT,
           job_description TEXT,
           status TEXT,
           list_id INTEGER,

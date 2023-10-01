@@ -25,6 +25,7 @@ class UpdateScreen extends StatefulWidget {
 
 class _UpdateScreenState extends State<UpdateScreen> {
   final itemNoteController = TextEditingController();
+  final scanController = ScanController();
 
   bool _isLoading = false;
   bool _scanMode = false;
@@ -68,10 +69,9 @@ class _UpdateScreenState extends State<UpdateScreen> {
           .where((element) =>
               element.partNumber.toLowerCase().contains(key) ||
               element.jobDescription.toLowerCase().contains(key) ||
-              element.itemNumber.toString().toLowerCase().contains(key))
-          .toList();
+              element.itemNumber.toString().contains(key)
+          ).toList();
     });
-    // await widget.itemRepository.search(key, widget.shipping.id);
   }
 
   @override
@@ -92,26 +92,29 @@ class _UpdateScreenState extends State<UpdateScreen> {
                       child: const Icon(Icons.arrow_back_ios),
                       onTap: () => Navigator.pop(context),
                     ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Incoming Items",
-                          style: GoogleFonts.poppins().copyWith(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Incoming Items",
+                            style: GoogleFonts.poppins().copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          widget.shipping.title,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins().copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w100,
-                              color: const Color(0xff8D92A3)),
-                        )
-                      ],
+                          Text(
+                            widget.shipping.title,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.poppins().copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w100,
+                                color: const Color(0xff8D92A3)),
+                          )
+                        ],
+                      ),
                     ),
                     Column(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -224,18 +227,18 @@ class _UpdateScreenState extends State<UpdateScreen> {
                         children: [
                           Positioned.fill(
                             child: ScanView(
+                              controller: scanController,
                               scanAreaScale: 1,
                               scanLineColor: orangeColor,
                               onCapture: (key) async {
-                                _searchItem(key);
-                                // var id = widget.itemRepository.list
-                                //     .firstWhere((element) =>
-                                //         element.partNumber.toLowerCase() == key)
-                                //     .id;
-                                // await widget.itemRepository.check(id);
-                                // setState(() {
-                                //   _scanMode = false;
-                                // });
+                                if(key.contains("--")) {
+                                  var newKeys = key.split("--");
+                                  key = newKeys[newKeys.length - 1];
+                                }
+
+                                _searchItem(key.trim());
+                                await Future.delayed(const Duration(milliseconds: 500));
+                                scanController.resume();
                               },
                             ),
                           ),
@@ -288,13 +291,27 @@ class _UpdateScreenState extends State<UpdateScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            _items[index].itemNumber.toString(),
-                                            style: GoogleFonts.poppins()
-                                                .copyWith(
-                                                    fontSize: 10,
-                                                    color: const Color(
-                                                        0xFF8D92A3)),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisAlignment: MainAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                _items[index].itemNumber.toString(),
+                                                style: GoogleFonts.poppins()
+                                                    .copyWith(
+                                                        fontSize: 10,
+                                                        color: const Color(
+                                                            0xFF8D92A3)),
+                                              ),
+                                              Text(
+                                                _items[index].segment.toString(),
+                                                style: GoogleFonts.poppins()
+                                                    .copyWith(
+                                                        fontSize: 10,
+                                                        color: const Color(
+                                                            0xFF8D92A3)),
+                                              ),
+                                            ],
                                           ),
                                           SizedBox(
                                             width: MediaQuery.of(context)
@@ -346,13 +363,20 @@ class _UpdateScreenState extends State<UpdateScreen> {
                                                                   0xFF8D92A3)),
                                                     ),
                                                   ],
-                                                )
+                                                ),
+                                                Text(
+                                                  _items[index].status,
+                                                  style: GoogleFonts.poppins()
+                                                      .copyWith(
+                                                    fontSize: 12, color: const Color(0xFF8D92A3), fontWeight: FontWeight.w100
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ),
                                           Checkbox(
                                               value: _items[index].checked,
-                                              onChanged: (checked) async {
+                                              onChanged: _items[index].note.isEmpty ? (checked) async {
                                                 await widget.itemRepository
                                                     .toggle(_items[index].id);
                                                 await widget.shippingRepository
@@ -369,7 +393,7 @@ class _UpdateScreenState extends State<UpdateScreen> {
                                                                 .list
                                                                 .length *
                                                             100);
-                                              }),
+                                              } : null),
                                         ],
                                       ),
                                       const Divider(),
@@ -391,58 +415,100 @@ class _UpdateScreenState extends State<UpdateScreen> {
                                               color: Color(0xFF8D92A3),
                                               size: 12,
                                             ),
-                                            onTap: () => showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                  title: Text("Item Note", style: GoogleFonts.poppins().copyWith(
-                                                    fontSize: 14,
-                                                  ),),
-                                                  content: TextField(
-                                                    controller: itemNoteController,
-                                                    keyboardType: TextInputType.text,
-                                                    style: GoogleFonts.poppins().copyWith(fontSize: 10),
-                                                    maxLines: 3,
-                                                    decoration: InputDecoration(
-                                                      hintText: "Give a note to the item",
-                                                      hintStyle: GoogleFonts.poppins().copyWith(
-                                                          fontSize: 10, color: const Color(0xFF8D92A3)),
-                                                      border: const OutlineInputBorder(
-                                                          borderRadius: BorderRadius.all(Radius.circular(15)),
-                                                          borderSide: BorderSide(width: 3)),
-                                                      contentPadding: const EdgeInsets.symmetric(
-                                                          horizontal: 18, vertical: 15),
-                                                      isDense: true,
-                                                      fillColor: Colors.white,
-                                                      filled: true,
-                                                    ),
-                                                  ),
-                                                  actions: [
-                                                    Padding(
-                                                      padding: const EdgeInsets.only(right: 20, left: 20, bottom: 10),
-                                                      child: ElevatedButton(
-                                                        style: ElevatedButton.styleFrom(
-                                                          backgroundColor: const Color(0xffFFCC28),
-                                                          padding: const EdgeInsets.only(
-                                                              top: 5, bottom: 5, left: 20, right: 20),
-                                                        ),
-                                                        onPressed: () async {
-                                                          await widget.itemRepository.addNote(_items[index].id, itemNoteController.text);
-                                                          itemNoteController.clear();
-                                                          Navigator.of(context).pop();
-                                                        },
-                                                        child: Text(
-                                                          'Save',
-                                                          style: GoogleFonts.poppins().copyWith(
-                                                            fontWeight: FontWeight.bold,
-                                                            fontSize: 13,
-                                                            color: const Color(0xFF0F2A75),
-                                                          ),
+                                            onTap: () {
+                                              itemNoteController.text = _items[index].note;
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) =>
+                                                    AlertDialog(
+                                                      title: Text("Item Note",
+                                                        style: GoogleFonts
+                                                            .poppins().copyWith(
+                                                          fontSize: 14,
+                                                        ),),
+                                                      content: TextField(
+                                                        controller: itemNoteController,
+                                                        keyboardType: TextInputType
+                                                            .text,
+                                                        style: GoogleFonts
+                                                            .poppins().copyWith(
+                                                            fontSize: 10),
+                                                        maxLines: 3,
+                                                        decoration: InputDecoration(
+                                                          hintText: 'Give a note to item number ${_items[index].itemNumber}',
+                                                          hintStyle: GoogleFonts
+                                                              .poppins()
+                                                              .copyWith(
+                                                              fontSize: 10,
+                                                              color: const Color(
+                                                                  0xFF8D92A3)),
+                                                          border: const OutlineInputBorder(
+                                                              borderRadius: BorderRadius
+                                                                  .all(Radius
+                                                                  .circular(
+                                                                  15)),
+                                                              borderSide: BorderSide(
+                                                                  width: 3)),
+                                                          contentPadding: const EdgeInsets
+                                                              .symmetric(
+                                                              horizontal: 18,
+                                                              vertical: 15),
+                                                          isDense: true,
+                                                          fillColor: Colors
+                                                              .white,
+                                                          filled: true,
                                                         ),
                                                       ),
-                                                    )
-                                                  ],
-                                              ),
-                                            ),
+                                                      actions: [
+                                                        Padding(
+                                                          padding: const EdgeInsets
+                                                              .only(right: 20,
+                                                              left: 20,
+                                                              bottom: 10),
+                                                          child: ElevatedButton(
+                                                            style: ElevatedButton
+                                                                .styleFrom(
+                                                              backgroundColor: const Color(
+                                                                  0xffFFCC28),
+                                                              padding: const EdgeInsets
+                                                                  .only(
+                                                                  top: 5,
+                                                                  bottom: 5,
+                                                                  left: 20,
+                                                                  right: 20),
+                                                            ),
+                                                            onPressed: () async {
+                                                              await widget
+                                                                  .itemRepository
+                                                                  .addNote(
+                                                                  _items[index]
+                                                                      .id,
+                                                                  itemNoteController
+                                                                      .text);
+                                                              itemNoteController
+                                                                  .clear();
+                                                              Navigator.of(
+                                                                  context)
+                                                                  .pop();
+                                                            },
+                                                            child: Text(
+                                                              'Save',
+                                                              style: GoogleFonts
+                                                                  .poppins()
+                                                                  .copyWith(
+                                                                fontWeight: FontWeight
+                                                                    .bold,
+                                                                fontSize: 13,
+                                                                color: const Color(
+                                                                    0xFF0F2A75),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        )
+                                                      ],
+                                                    ),
+                                              );
+                                            },
                                           ),
                                         ],
                                       )

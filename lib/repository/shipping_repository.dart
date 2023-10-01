@@ -48,6 +48,7 @@ class ShippingRepository extends ChangeNotifier {
       await db.update(_table, {'progress': progress, 'updated_at': current.toString()}, where: "id = ?", whereArgs: [id]);
       _list[index].progress = progress;
       _list[index].updatedAt = current;
+      _list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt),);
     } catch (e) {
       throw Exception(e);
     } finally {
@@ -60,10 +61,16 @@ class ShippingRepository extends ChangeNotifier {
     try {
       await db.delete(_table, where: "id = ?", whereArgs: [id]);
       _list = _list.where((i) => i.id != id).toList();
+      _list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt),);
     } catch (e) {
       throw Exception(e);
     } finally {
       notifyListeners();
     }
+  }
+
+  void sort() {
+    _list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt),);
+    notifyListeners();
   }
 }

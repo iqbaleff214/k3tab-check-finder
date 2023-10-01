@@ -1,15 +1,19 @@
 import 'dart:io';
 
+import 'package:accordion/accordion.dart';
 import 'package:excel/excel.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
+import '../model/item_model.dart';
 import '../model/shipping_model.dart';
 import '../repository/item_repository.dart';
 import '../repository/shipping_repository.dart';
 import '../util/color.dart';
+
+enum Category { all, open, noted, completed }
 
 class SummaryScreen extends StatefulWidget {
   const SummaryScreen(
@@ -28,6 +32,10 @@ class SummaryScreen extends StatefulWidget {
 
 class _SummaryScreenState extends State<SummaryScreen> {
   bool _isLoading = false;
+  Category _selectedCategory = Category.all;
+  TextEditingController _searchController = TextEditingController();
+
+  List<Item> _items = [];
 
   @override
   void initState() {
@@ -42,12 +50,39 @@ class _SummaryScreenState extends State<SummaryScreen> {
     try {
       await widget.itemRepository.load(widget.shipping.id);
       widget.itemRepository.sort();
+      _items = widget.itemRepository.list;
     } catch (e) {
       debugPrint(e.toString());
     } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  void _searchItem(String key) {
+    key = key.toLowerCase();
+    setState(() {
+      _items = widget.itemRepository.list.where((item) => _find(item, key) && _category(item)).toList();
+    });
+  }
+
+  bool _find(Item item, String key) {
+    return item.partNumber.toLowerCase().contains(key) ||
+        item.jobDescription.toLowerCase().contains(key) ||
+        item.itemNumber.toString().toLowerCase().contains(key);
+  }
+
+  bool _category(Item item) {
+    switch (_selectedCategory) {
+      case Category.completed:
+        return item.checked;
+      case Category.noted:
+        return !item.checked && item.note.isNotEmpty;
+      case Category.open:
+        return !item.checked && item.note.isEmpty;
+      default:
+        return true;
     }
   }
 
@@ -60,43 +95,90 @@ class _SummaryScreenState extends State<SummaryScreen> {
       sheetObject.appendRow([
         "Item No.",
         "Product / Service",
-        "Quantity",
         "Job Description",
+        "Status",
+        "Segment Number",
+        "Quantity",
         "Checked?",
         "Note"
       ]);
 
-      for (var item in widget.itemRepository.list) {
+      for (var item in _items) {
         sheetObject.appendRow([
           item.itemNumber,
           item.partNumber,
-          item.quantity,
           item.jobDescription,
-          item.checked,
+          item.status,
+          item.segment,
+          item.quantity,
+          item.checked ? 'Yes' : 'No',
           item.note,
         ]);
       }
 
-      final fileBytes = excel.save();
-      final directory = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+      if (!await _requestPermission(Permission.storage)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Denied.'),
+        ));
+        debugPrint('gagal');
+      }
+
+      if (!await _requestPermission(Permission.manageExternalStorage)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Denied.'),
+        ));
+        debugPrint('gagal2');
+      }
+
       final current = DateTime.now();
+      final fileBytes = excel.save();
+      var directory = await getExternalStorageDirectory();
+      if (directory == null) return;
+      String newPath = "";
+      debugPrint(directory.path);
+      List<String> paths = directory.path.split("/");
+      for (int x = 1; x < paths.length; x++) {
+        String folder = paths[x];
+        if (folder != "Android") {
+          newPath += "/$folder";
+        } else {
+          break;
+        }
+      }
+      newPath = "$newPath/CheckFinder";
+      directory = Directory(newPath);
 
       debugPrint('location: ${directory.path}');
 
-      var file = File(
-          '${directory.path}/${current.year}_${current.month}_${current.day}_summary_of_${widget.shipping.title.replaceAll(" ", "_")}');
+      File file = File(
+          '${directory?.path}/${current.year}_${current.month}_${current.day}_${current.hour}_${current.minute}_${current.second}_summary_of_${widget.shipping.title.replaceAll(" ", "_")}');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
       file = await file.create();
       // file.createSync(recursive: true);
       file = await file.writeAsBytes(fileBytes!);
       debugPrint(sheetObject.rows.length.toString());
       debugPrint(file.path);
 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Downloaded.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Downloaded and stored at: ${file.path}'),
       ));
     } catch (e) {
       debugPrint('error: ${e.toString()}');
     }
+  }
+
+  Future<bool> _requestPermission(Permission permission) async {
+    if (await permission.isGranted) {
+      debugPrint('already true');
+      return true;
+    }
+
+    var res = await permission.request();
+    debugPrint('asked?');
+    debugPrint(res.toString());
+    return res == PermissionStatus.granted;
   }
 
   @override
@@ -117,26 +199,29 @@ class _SummaryScreenState extends State<SummaryScreen> {
                       child: const Icon(Icons.arrow_back_ios),
                       onTap: () => Navigator.pop(context),
                     ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Summary",
-                          style: GoogleFonts.poppins().copyWith(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                    Flexible(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Summary",
+                            style: GoogleFonts.poppins().copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          widget.shipping.title,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins().copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w100,
-                              color: const Color(0xff8D92A3)),
-                        )
-                      ],
+                          Text(
+                            widget.shipping.title,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                            style: GoogleFonts.poppins().copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w100,
+                                color: const Color(0xff8D92A3)),
+                          )
+                        ],
+                      ),
                     ),
                     Column(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -175,6 +260,55 @@ class _SummaryScreenState extends State<SummaryScreen> {
                 const SizedBox(
                   height: 20,
                 ),
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: "Item number, Part Number, or Part Name",
+                    hintStyle: GoogleFonts.poppins().copyWith(
+                        fontSize: 10, color: const Color(0xFF8D92A3)),
+                    border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(15)),
+                        borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 15),
+                    isDense: true,
+                    fillColor: Colors.white,
+                    filled: true,
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Colors.black,
+                    ),
+                  ),
+                  keyboardType: TextInputType.text,
+                  style: GoogleFonts.poppins().copyWith(fontSize: 10),
+                  maxLines: 1,
+                  onChanged: (value) => _searchItem(value),
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: Category.values.map<Widget>((e) => GestureDetector(
+                      onTap: () {
+                        setState(() { _selectedCategory = e; });
+                        _searchItem(_searchController.text);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 5),
+                        padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+                        decoration: BoxDecoration(
+                            color: _selectedCategory == e ? orangeColor : const Color(0xFF8D92A3),
+                            borderRadius: BorderRadius.circular(15)
+                        ),
+                        child: Text(e.name.toUpperCase(), style: GoogleFonts.poppins().copyWith(fontSize: 10, color: Colors.white),),
+                      ),
+                    )).toList(),
+                ),
+                const SizedBox(
+                  height: 15,
+                ),
                 _isLoading
                     ? const Padding(
                         padding: EdgeInsets.all(20.0),
@@ -184,7 +318,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                           ),
                         ),
                       )
-                    : widget.itemRepository.list.isNotEmpty
+                    : _items.isNotEmpty
                         ? Expanded(
                             child: MediaQuery.removePadding(
                             removeTop: true,
@@ -203,15 +337,27 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            widget.itemRepository.list[index]
-                                                .itemNumber
-                                                .toString(),
-                                            style: GoogleFonts.poppins()
-                                                .copyWith(
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisAlignment: MainAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                _items[index].itemNumber.toString(),
+                                                style: GoogleFonts.poppins()
+                                                    .copyWith(
                                                     fontSize: 10,
                                                     color: const Color(
                                                         0xFF8D92A3)),
+                                              ),
+                                              Text(
+                                                _items[index].segment.toString(),
+                                                style: GoogleFonts.poppins()
+                                                    .copyWith(
+                                                    fontSize: 10,
+                                                    color: const Color(
+                                                        0xFF8D92A3)),
+                                              ),
+                                            ],
                                           ),
                                           SizedBox(
                                             width: MediaQuery.of(context)
@@ -225,18 +371,13 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  widget
-                                                      .itemRepository
-                                                      .list[index]
-                                                      .jobDescription,
+                                                  _items[index].jobDescription,
                                                   style: GoogleFonts.poppins()
                                                       .copyWith(
                                                     fontSize: 14,
                                                   ),
                                                 ),
-                                                Text(
-                                                    widget.itemRepository
-                                                        .list[index].partNumber,
+                                                Text(_items[index].partNumber,
                                                     style: GoogleFonts.poppins()
                                                         .copyWith(
                                                             fontSize: 14,
@@ -245,6 +386,16 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                                                     .w900),
                                                     overflow:
                                                         TextOverflow.ellipsis),
+                                                Text(
+                                                  _items[index].status,
+                                                  style: GoogleFonts.poppins()
+                                                      .copyWith(
+                                                          fontSize: 12,
+                                                          color: const Color(
+                                                              0xFF8D92A3),
+                                                          fontWeight:
+                                                              FontWeight.w100),
+                                                ),
                                               ],
                                             ),
                                           ),
@@ -254,7 +405,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.end,
                                             children: [
-                                              widget.itemRepository.list[index]
+                                              _items[index]
                                                       .checked
                                                   ? const Icon(
                                                       Icons.check_circle_sharp,
@@ -268,7 +419,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                                 height: 10,
                                               ),
                                               Text(
-                                                '${widget.itemRepository.list[index].quantity.toString()} Qty',
+                                                '${_items[index].quantity.toString()} Qty',
                                                 style: GoogleFonts.poppins()
                                                     .copyWith(
                                                         fontSize: 9,
@@ -287,7 +438,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                             MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            widget.itemRepository.list[index]
+                                            _items[index]
                                                 .note,
                                             style:
                                                 GoogleFonts.poppins().copyWith(
@@ -301,12 +452,12 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                   ),
                                 ),
                               ),
-                              itemCount: widget.itemRepository.list.length,
+                              itemCount: _items.length,
                               scrollDirection: Axis.vertical,
                               shrinkWrap: true,
                             ),
                           ))
-                        : const SizedBox(),
+                        : Container(margin: const EdgeInsets.only(top: 10), child: Center(child: Text("Item(s) not found.", style: GoogleFonts.poppins().copyWith(color: const Color(0xFF8D92A3))),)),
               ]),
         ));
   }

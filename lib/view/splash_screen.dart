@@ -25,6 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Builder(
         builder: (context) {
           final double height = MediaQuery.of(context).size.height;
@@ -69,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(50)
                           ),
-                          child: Image.asset("asset/findcheckerpng.png", height: 75.0, width: 75.0,),
+                          child: Image.asset("asset/findchecker.png", height: 75.0, width: 75.0,),
                       ),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.start,
