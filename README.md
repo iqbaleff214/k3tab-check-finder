@@ -51,6 +51,9 @@ _Click the following link to view other K3TAB applications:_ [K3TAB](https://git
 <img src="https://play-lh.googleusercontent.com/mlPFodib1PleXLOMo9lYgZBU-fDTJzTniKNtLEBuMhEmPAUCgLeflYbdxH_5vfTv6w=w5120-h2880-rw" height="450" alt="list screen">
 </center>
 
+## Download from Google Play Store
+[Check Finder](https://play.google.com/store/apps/details?id=com.iqbaleff214.k3tab2023.k3tab_2023)
+
 ## License
 
 __Check Finder__ is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
